@@ -5,6 +5,8 @@ namespace App\Services;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Contracts\Routing\ResponseFactor;
 
+use App\Enums\Snake;
+
 class MapService
 {
 
@@ -13,7 +15,7 @@ class MapService
 	 *
 	 * @var string
 	*/
-	protected $bestChoice = 'right';
+	protected $bestChoice = Snake::DefaultChoice;
 
 	/**
 	 * this game id
@@ -120,7 +122,7 @@ class MapService
 			$x = $locale['x'];
 			$y = $locale['y'];
 
-			$this->map[$x][$y] = 1;
+			$this->map[$x][$y] = Snake::Food;
 		}
 	}
 
@@ -144,11 +146,11 @@ class MapService
 
 				if ($ind === 0)
 				{
-					$this->map[$x][$y] = 'H';
+					$this->map[$x][$y] = Snake::Head;
 				}
 				else if ($ind === $length - 1)
 				{
-					$this->map[$x][$y] = 'T';
+					$this->map[$x][$y] = Snake::Tail;
 				}
 				else
 				{
@@ -171,12 +173,13 @@ class MapService
 		$roads = $this->whereCanAccess($head);
 		$this->logger('road: '. json_encode($roads));
 		$score = array();
-		$step = \ceil(\count($mySnake['body'])/2);
+		$halfLength = \ceil(\count($mySnake['body'])/2);
+		$step = ($halfLength > Snake::MaxDepthOfDFS) ? Snake::MaxDepthOfDFS : $halfLength;
 		foreach ($roads as $road => $bool)
 		{
-			$score[$road] = $this->ScoreDFS($this->map, $mySnake, $road, 6);
+			$score[$road] = $this->ScoreDFS($this->map, $mySnake, $road, Snake::MaxDepthOfDFS);
 		}
-		
+
 		$this->getBestChoice($score);
 	}
 
@@ -193,9 +196,9 @@ class MapService
 
 		$curHead = $curSnake['body'][0];
 		$nexts = $this->whereCanAccess($curHead);
-		
+
 		$info = array(
-			'isFood' => $this->map[$x][$y] === 1,
+			'isFood' => $this->map[$x][$y] === Snake::Food,
 			'isNearHead' => $this->isNearHead($x, $y),
 			'numOfNextAccess' => \count($nexts)
 		);
@@ -222,7 +225,7 @@ class MapService
 		$totalCount = 0;
 		foreach ($dfs as $val)
 		{
-			$maxScore = max($maxScore, $score + 1 * $val['score']);
+			$maxScore = max($maxScore, $score + Snake::DepthFilter * $val['score']);
 			$minusCount += $val['minusCount'];
 			$totalCount += $val['count'];
 		}
@@ -256,17 +259,17 @@ class MapService
 		if ($bJustEatFood)
 		{
 			$map[$oldHead['x']][$oldHead['y']] = $snake['name'];
-			$map[$newPos['x']][$newPos['y']] = 'H';
+			$map[$newPos['x']][$newPos['y']] = Snake::Head;
 			array_shift($body);
 			array_unshift($body, $newPos);
 		}
 		else
 		{
 			$map[$oldHead['x']][$oldHead['y']] = $snake['name'];
-			$map[$oldTail['x']][$oldTail['y']] = 0;
+			$map[$oldTail['x']][$oldTail['y']] = Snake::Road;
 
-			$map[$newPos['x']][$newPos['y']] = 'H';
-			$map[$newTail['x']][$newTail['y']] = 'T';
+			$map[$newPos['x']][$newPos['y']] = Snake::Head;
+			$map[$newTail['x']][$newTail['y']] = Snake::Tail;
 
 			array_pop($body);
 			array_unshift($body, $newPos);
@@ -319,7 +322,7 @@ class MapService
 	 */
 	private function isAccess(int $x, int $y)
 	{
-		return is_int($this->map[$x][$y]) || $this->map[$x][$y] === 'T';
+		return is_int($this->map[$x][$y]) || $this->map[$x][$y] === Snake::Tail;
 	}
 
 	/**
@@ -334,10 +337,10 @@ class MapService
 		return \count(
 			array_filter(
 				array(
-					$this->map[$x - 1][$y] === 'H',
-					$this->map[$x + 1][$y] === 'H',
-					$this->map[$x][$y - 1] === 'H',
-					$this->map[$x][$y + 1] === 'H'
+					$this->map[$x - 1][$y] === Snake::Head,
+					$this->map[$x + 1][$y] === Snake::Head,
+					$this->map[$x][$y - 1] === Snake::Head,
+					$this->map[$x][$y + 1] === Snake::Head
 				)
 			)
 		) > 1;
@@ -399,9 +402,9 @@ class MapService
 	private function getScore(array $info)
 	{
 		$score = 100;
-		$score += ($info['isNearHead']) ? -50 : 0;
-		$score += ($info['isFood']) ? 30 : 0;
-		$score += ($info['numOfNextAccess'] === 0) ? -1000 : 0;
+		$score += ($info['isNearHead']) ? (Snake::IsNearHeadScore) : 0;
+		$score += ($info['isFood']) ? (Snake::IsFoodScore) : 0;
+		$score += ($info['numOfNextAccess'] === 0) ? (Snake::DeathRoad) : 0;
 
 		return $score;
 	}
@@ -420,7 +423,7 @@ class MapService
 		foreach($score as $road => $info)
 		{
 			$calScore = $info['score'] * (1 + $info['minusCount'] / $info['count']);
-			
+
 			if ($calScore > $maxScore)
 			{
 				$maxScore = $calScore;
@@ -434,7 +437,7 @@ class MapService
 					$bestChoice = $road;
 				}
 			}
-		} 
+		}
 		$this->bestChoice = $bestChoice;
 	}
 
