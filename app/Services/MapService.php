@@ -175,8 +175,7 @@ class MapService
 	{
 		$head = $mySnake['body'][0];
 
-		$roads = $this->whereCanAccess($head);
-		$this->logger('road: '. json_encode($roads));
+		$roads = $this->whereCanAccess($this->map, $head);
 		$score = array();
 		$halfLength = \ceil(\count($mySnake['body'])/2);
 		$step = ($halfLength > Snake::MaxDepthOfDFS) ? Snake::MaxDepthOfDFS : $halfLength;
@@ -200,7 +199,7 @@ class MapService
 		list($curMap, $curSnake) = $this->getNewMapBody($map, $snake, ['x' => $x, 'y' => $y]);
 
 		$curHead = $curSnake['body'][0];
-		$nexts = $this->whereCanAccess($curHead);
+		$nexts = $this->whereCanAccess($curMap, $curHead);
 
 		$info = array(
 			'isFood' => $this->map[$x][$y] === Snake::Food,
@@ -305,16 +304,16 @@ class MapService
 	 * @param array $head
 	 * @return array
 	 */
-	private function whereCanAccess(array $head)
+	private function whereCanAccess(array $map, array $head)
 	{
 		$x = $head['x'];
 		$y = $head['y'];
 
 		return array_filter(array(
-			'up' => $this->isAccess($x, $y-1),
-			'down' => $this->isAccess($x, $y+1),
-			'left' => $this->isAccess($x-1, $y),
-			'right' => $this->isAccess($x+1, $y)
+			'up' => $this->isAccess($map, $x, $y-1),
+			'down' => $this->isAccess($map, $x, $y+1),
+			'left' => $this->isAccess($map, $x-1, $y),
+			'right' => $this->isAccess($map, $x+1, $y)
 		));
 	}
 
@@ -325,9 +324,9 @@ class MapService
 	 * @param integer $y
 	 * @return boolean
 	 */
-	private function isAccess(int $x, int $y)
+	private function isAccess(array $map, int $x, int $y)
 	{
-		return is_int($this->map[$x][$y]) || $this->map[$x][$y] === Snake::Tail;
+		return is_int($map[$x][$y]) || $map[$x][$y] === Snake::Tail;
 	}
 
 	/**
@@ -364,10 +363,10 @@ class MapService
 		return count(
 			array_filter(
 				array(
-					is_int($newMap[$x - 1][$y]),
-					is_int($newMap[$x + 1][$y]),
-					is_int($newMap[$x][$y - 1]),
-					is_int($newMap[$x][$y + 1])
+					is_int($map[$x - 1][$y]),
+					is_int($map[$x + 1][$y]),
+					is_int($map[$x][$y - 1]),
+					is_int($map[$x][$y + 1])
 				)
 			)
 		);

@@ -13,7 +13,7 @@ abstract class Snake {
 
 	const MaxDepthOfDFS = 6;
 
-	const DepthFilter = 1;
+	const DepthFilter = 0.9;
 
 	const IsNearHeadScore = -50;
 	const IsFoodScore = 30;
