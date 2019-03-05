@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Contracts\Routing\ResponseFactor;
 use App\Services\MapService;
 
 class BattleSnakeController extends Controller
@@ -26,7 +27,13 @@ class BattleSnakeController extends Controller
 	 */
 	public function start()
 	{
-		return 'Hello World';
+		return response()->json(
+			[
+				"color" => "#12A2AA",
+				"headType" => "bendr",
+				"tailType" => "pixel"
+			]
+		);
 	}
 
 	/**

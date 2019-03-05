@@ -69,12 +69,17 @@ class MapService
 	 */
 	public function game(array $data)
 	{
-		$this->id = $data['game']['id'];
-		$this->turn = $data['turn'];
+		try {
+			$this->id = $data['game']['id'];
+			$this->turn = $data['turn'];
 
-		$this->setMap($data['board']);
+			$this->setMap($data['board']);
 
-		$this->calculateBestMove($data['you']);
+			$this->calculateBestMove($data['you']);
+
+		} catch (\Exception $e) {
+			$this->logger('Exception: '.json_encode($data));
+		}
 	}
 
 	private function setMap(array $board)
@@ -449,6 +454,8 @@ class MapService
 	 */
 	private function logger(string $message)
 	{
-		Log::info("[Game ID: {$this->id}, Turn: {$this->turn}]: ". $message);
+		$turn = ($this->turn) ?? -1;
+		$id = ($this->id) ?? -1;
+		Log::info("[Game ID: $id, Turn: $turn]: ". $message);
 	}
 }
